@@ -1,0 +1,8 @@
+__pycache__
+
+.vscode
+
+/src/ddp.sh
+
+data
+runs
