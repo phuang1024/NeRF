@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 
+import cv2
 import numpy as np
 
 import torch
@@ -39,16 +40,24 @@ class ImageDataset(Dataset):
         # Find corresponding ray of image.
         i = 0
         while True:
-            image, meta = self.images[i]
+            image_path, meta = self.images[i]
             width, height = meta["res"]
             curr_size = width * height
             if idx < i + curr_size:
                 break
             i += curr_size
-        # `idx` is index of ray in `image`
+        # `idx` is index of pixel in `image`
         idx -= i
 
         # Get ray
+        px_y = idx // width
+        px_x = idx % width
+        ray = pixel_to_ray(width, height, meta["fov"], meta["loc"], meta["rot"], px_x, px_y)
+        image = cv2.imread(str(image_path))
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        color = image[px_y, px_x] / 255
+
+        return ray, color
 
 
 def quat_mult(q1, q2):
@@ -84,7 +93,7 @@ def pixel_to_ray(width, height, fov_x, loc, rot: np.ndarray, x, y):
     rot_conj = np.array([rot[0], -rot[1], -rot[2], -rot[3]])
     ray = quat_mult(quat_mult(rot, ray), rot_conj)
     ray = ray[1:]
-    #ray /= np.linalg.norm(ray)
+    ray /= np.linalg.norm(ray)
 
     return loc, ray
 
