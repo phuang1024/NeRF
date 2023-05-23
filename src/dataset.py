@@ -87,7 +87,6 @@ def pixel_to_ray(width, height, fov_x, loc, rot: np.ndarray, x, y):
     x_near = np.tan(fov_x / 2) * x_fac
     y_near = np.tan(fov_x / 2) * y_fac / aspect
     ray = np.array([0, x_near, y_near, -1])
-    print("Local ray", ray)
 
     # Rotate by camera's rotation.
     rot_conj = np.array([rot[0], -rot[1], -rot[2], -rot[3]])
