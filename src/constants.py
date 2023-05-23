@@ -4,7 +4,13 @@ import torch
 # TODO
 
 # Model hyperparameters
-# TODO
+# Sine embeddings
+FREQ_MIN = 1
+FREQ_MAX = 256
+EMBED_DIM = 256
+# NeRF MLP model
+MLP_DIM = 256
+MLP_DEPTH = 8
 
 # Training parameters
 BATCH_SIZE = 64
