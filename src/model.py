@@ -8,6 +8,8 @@ import torch.nn as nn
 
 from constants import *
 
+DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 
 class SineEmbedding(nn.Module):
     """
@@ -26,22 +28,53 @@ class SineEmbedding(nn.Module):
 
 
 class NeRF(nn.Module):
+    """
+    Input: EMBED_DIM * d_input
+    Output: 4 (x, y, z, density)
+    """
+
     def __init__(self, d_input):
         """
         :param d_input: Number of values going in. E.g. x, y, z: d_input = 3
         """
         super().__init__()
 
+        self.embedding = SineEmbedding()
+
         layers = []
         for i in range(MLP_DEPTH):
             in_dim = EMBED_DIM * d_input if i == 0 else MLP_DIM
-            layers.append(nn.Linear(in_dim, MLP_DIM))
+            out_dim = 4 if i == MLP_DEPTH - 1 else MLP_DIM
+            layers.append(nn.Linear(in_dim, out_dim))
             layers.append(nn.LeakyReLU())
         self.mlp = nn.Sequential(*layers)
 
     def forward(self, x):
+        x = self.embedding(x)
         x = self.mlp(x)
         return x
+
+
+def renderer(nerf: NeRF, loc, ray, clipping, steps):
+    """
+    Use volume rendering, from loc for distance clipping.
+    """
+    # Get samples at intervals.
+    samples = torch.empty(steps, 4, device=DEVICE)
+    step_ray = ray / np.linalg.norm(ray) * clipping / steps
+    curr_loc = loc
+    for i in range(steps):
+        curr_loc = curr_loc + step_ray
+        samples[i] = nerf(curr_loc)
+    color = samples[:, :3]
+    density = samples[:, 3]
+    density_cum = torch.exp(-torch.cumsum(density, dim=0))
+
+    result = torch.zeros(3, device=DEVICE)
+    for i in range(steps):
+        result += density_cum[i] * density[i] * color[i]
+
+    return result
 
 
 if __name__ == "__main__":
