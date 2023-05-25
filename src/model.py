@@ -1,12 +1,15 @@
 import math
 
+import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 
 import torch
+import torchvision
 import torch.nn as nn
 
 from constants import *
+from dataset import pixel_to_ray
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -46,30 +49,34 @@ class NeRF(nn.Module):
             in_dim = EMBED_DIM * d_input if i == 0 else MLP_DIM
             out_dim = 4 if i == MLP_DEPTH - 1 else MLP_DIM
             layers.append(nn.Linear(in_dim, out_dim))
-            layers.append(nn.LeakyReLU())
+            if i != MLP_DEPTH - 1:
+                layers.append(nn.LeakyReLU())
         self.mlp = nn.Sequential(*layers)
 
     def forward(self, x):
         x = self.embedding(x)
+        x = x.view(x.shape[0], -1)
         x = self.mlp(x)
         return x
 
 
-def renderer(nerf: NeRF, loc, ray, clipping, steps):
+def render_ray(nerf: NeRF, loc, ray, clipping, steps):
     """
     Use volume rendering, from loc for distance clipping.
     """
     # Get samples at intervals.
-    samples = torch.empty(steps, 4, device=DEVICE)
-    step_ray = ray / np.linalg.norm(ray) * clipping / steps
-    curr_loc = loc
+    step_ray = torch.tensor(ray / np.linalg.norm(ray) * clipping / steps, device=DEVICE)
+    model_input = torch.empty(steps, 3, device=DEVICE)
+    loc = torch.tensor(loc, device=DEVICE)
     for i in range(steps):
-        curr_loc = curr_loc + step_ray
-        samples[i] = nerf(curr_loc)
+        loc = loc + step_ray
+        model_input[i] = loc
+    samples = nerf(model_input)
     color = samples[:, :3]
     density = samples[:, 3]
     density_cum = torch.exp(-torch.cumsum(density, dim=0))
 
+    # Integrate
     result = torch.zeros(3, device=DEVICE)
     for i in range(steps):
         result += density_cum[i] * density[i] * color[i]
@@ -77,10 +84,41 @@ def renderer(nerf: NeRF, loc, ray, clipping, steps):
     return result
 
 
+def render_image(nerf: NeRF, loc, rot, fov, resolution: tuple[int, int]):
+    """
+    :param loc, rot, fov, resolution: Camera parameters. See dataset.py/pixel_to_ray
+    """
+    image = torch.zeros((*resolution, 3), device=DEVICE)
+    for x in range(resolution[0]):
+        for y in range(resolution[1]):
+            _, ray = pixel_to_ray(*resolution, fov, loc, rot, x, y)
+            image[y, x] = render_ray(nerf, loc, ray, CLIPPING, RENDER_STEPS)
+    return image
+
+
+def init_weights(m):
+    if type(m) == nn.Linear:
+        nn.init.xavier_uniform_(m.weight)
+        nn.init.zeros_(m.bias)
+
+
 if __name__ == "__main__":
+    """
+    # Test sine embeddings
     embedding = SineEmbedding()
     data = torch.linspace(0, 1, 1000)
     embeds = embedding(data).detach().numpy()
     embeds = np.interp(embeds, [np.min(embeds), np.max(embeds)], [0, 1])
     plt.imshow(embeds.T, aspect="auto", cmap="gray")
     plt.savefig("embed.png")
+    """
+
+    # Test render image
+    nerf = NeRF(3).to(DEVICE)
+    nerf.apply(init_weights)
+    loc = np.array([0, 0, 0])
+    rot = np.array([1, 0, 0, 0])
+    image = render_image(nerf, loc, rot, 60, (128, 128))
+    image = image.detach().cpu().numpy()
+    image = np.clip(image*255, 0, 255).astype(np.uint8)
+    cv2.imwrite("image.png", image)

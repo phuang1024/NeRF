@@ -7,10 +7,13 @@ import torch
 # Sine embeddings
 FREQ_MIN = 1
 FREQ_MAX = 256
-EMBED_DIM = 256
+EMBED_DIM = 8
 # NeRF MLP model
-MLP_DIM = 256
-MLP_DEPTH = 8
+MLP_DIM = 64
+MLP_DEPTH = 4
+# Rendering
+CLIPPING = 4
+RENDER_STEPS = 16
 
 # Training parameters
 BATCH_SIZE = 64

@@ -89,7 +89,7 @@ def pixel_to_ray(width, height, fov_x, loc, rot: np.ndarray, x, y):
     ray = np.array([0, x_near, y_near, -1])
 
     # Rotate by camera's rotation.
-    rot_conj = np.array([rot[0], -rot[1], -rot[2], -rot[3]])
+    rot_conj = rot * np.array([1, -1, -1, -1])
     ray = quat_mult(quat_mult(rot, ray), rot_conj)
     ray = ray[1:]
     ray /= np.linalg.norm(ray)
@@ -98,6 +98,9 @@ def pixel_to_ray(width, height, fov_x, loc, rot: np.ndarray, x, y):
 
 
 if __name__ == "__main__":
+    """
+    # Test pixel_to_ray
+
     width = height = 100
     fov = np.pi / 2
     loc = np.array([0, 0, 0])
@@ -105,3 +108,9 @@ if __name__ == "__main__":
     rot = np.array([0.707, 0.707, 0, 0])
 
     print(pixel_to_ray(width, height, fov, loc, rot, 00, 00))
+    """
+
+    # Test ImageDataset
+    dataset = ImageDataset(Path("data/RubberDuck"))
+    print(len(dataset))
+    print(dataset[0])
