@@ -39,16 +39,10 @@ class ImageDataset(Dataset):
         return length
 
     def __getitem__(self, idx):
-        # Find corresponding ray of image.
-        i = 0
-        while True:
-            image_path, meta = self.images[i]
-            width, height = meta["res"]
-            curr_size = width * height
-            if idx < curr_size:
-                break
-            idx -= curr_size
-            i += 1
+        meta, i, px_i = self.get_meta(idx)
+        width, height = meta["res"]
+        image_path = self.images[i][0]
+        idx = px_i
 
         # Get ray
         px_y = idx // width
@@ -59,6 +53,25 @@ class ImageDataset(Dataset):
         color = image[px_y, px_x] / 255
 
         return (torch.tensor(meta["loc"], dtype=torch.float32), ray), torch.tensor(color, dtype=torch.float32)
+
+    def get_meta(self, idx):
+        """
+        :return: (meta, img_i, px_i)
+            meta is dictionary of image metadata.
+            img_i is which image was used.
+            px_i is index of pixel in this image.
+        """
+        i = 0
+        while True:
+            image_path, meta = self.images[i]
+            width, height = meta["res"]
+            curr_size = width * height
+            if idx < curr_size:
+                break
+            idx -= curr_size
+            i += 1
+
+        return meta, i, idx
 
 
 def quat_mult(q1, q2):

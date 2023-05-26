@@ -67,7 +67,7 @@ def render_ray(nerf: NeRF, loc, ray, clipping, steps):
     # Get samples at intervals.
     step_ray = ray / torch.norm(ray) * clipping / steps
     model_input = torch.empty(steps, 3, device=DEVICE, dtype=torch.float32)
-    loc = torch.tensor(loc, device=DEVICE, dtype=torch.float32)
+    loc = loc.clone().detach()
     for i in range(steps):
         loc = loc + step_ray
         model_input[i] = loc
@@ -92,6 +92,7 @@ def render_image(nerf: NeRF, loc, rot, fov, resolution: tuple[int, int]):
     for x in range(resolution[0]):
         for y in range(resolution[1]):
             ray = pixel_to_ray(*resolution, fov, rot, x, y)
+            ray = torch.tensor(ray, device=DEVICE, dtype=torch.float32)
             image[y, x] = render_ray(nerf, loc, ray, CLIPPING, RENDER_STEPS)
     return image
 
