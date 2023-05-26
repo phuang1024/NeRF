@@ -52,12 +52,12 @@ class ImageDataset(Dataset):
         # Get ray
         px_y = idx // width
         px_x = idx % width
-        ray = pixel_to_ray(width, height, meta["fov"], meta["loc"], meta["rot"], px_x, px_y)
+        ray = pixel_to_ray(width, height, meta["fov"], meta["rot"], px_x, px_y)
         image = cv2.imread(str(image_path))
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         color = image[px_y, px_x] / 255
 
-        return ray, color
+        return (meta["loc"], ray), color
 
 
 def quat_mult(q1, q2):
@@ -71,12 +71,11 @@ def quat_mult(q1, q2):
     ])
 
 
-def pixel_to_ray(width, height, fov_x, loc, rot: np.ndarray, x, y):
+def pixel_to_ray(width, height, fov_x, rot: np.ndarray, x, y):
     """
     Convert pixel on a camera setup to a normalized ray starting from the camera.
     :param width, height: Resolution of the image.
     :param fov_x: Field of view in radians in horizontal camera direction.
-    :param loc: Location of the camera.
     :param rot: Camera quaternion rotation.
     :param x, y: Pixel coordinates.
     """
@@ -94,7 +93,7 @@ def pixel_to_ray(width, height, fov_x, loc, rot: np.ndarray, x, y):
     ray = ray[1:]
     ray /= np.linalg.norm(ray)
 
-    return loc, ray
+    return ray
 
 
 if __name__ == "__main__":

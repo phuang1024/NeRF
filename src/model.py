@@ -91,7 +91,7 @@ def render_image(nerf: NeRF, loc, rot, fov, resolution: tuple[int, int]):
     image = torch.zeros((*resolution, 3), device=DEVICE)
     for x in range(resolution[0]):
         for y in range(resolution[1]):
-            _, ray = pixel_to_ray(*resolution, fov, loc, rot, x, y)
+            ray = pixel_to_ray(*resolution, fov, rot, x, y)
             image[y, x] = render_ray(nerf, loc, ray, CLIPPING, RENDER_STEPS)
     return image
 
