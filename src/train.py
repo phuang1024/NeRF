@@ -83,6 +83,8 @@ def train(model, dataset, logdir, args):
         }
         return DataLoader(dataset, **loader_args)
 
+    model.apply(init_weights)
+
     # Create data loaders.
     train_len = int(len(dataset) * 0.9)
     test_len = len(dataset) - train_len
@@ -93,7 +95,7 @@ def train(model, dataset, logdir, args):
     print(f"Test set: {len(test_dataset)} batches")
 
     criterion = torch.nn.MSELoss()
-    optim = torch.optim.Adam(model.parameters(), lr=LR_START)
+    optim = torch.optim.SGD(model.parameters(), lr=LR_START, momentum=0.5, weight_decay=1e-4)
     lr_decay_fac = (LR_END / LR_START) ** (1 / EPOCHS)
     scheduler = torch.optim.lr_scheduler.StepLR(optim, step_size=1, gamma=lr_decay_fac)
 

@@ -67,7 +67,6 @@ def render_ray(nerf: NeRF, loc, ray, clipping, steps):
     # Get samples at intervals.
     step_ray = ray / torch.norm(ray) * clipping / steps
     model_input = torch.empty(steps, 3, device=DEVICE, dtype=torch.float32)
-    loc = loc.clone().detach()
     for i in range(steps):
         loc = loc + step_ray
         model_input[i] = loc
