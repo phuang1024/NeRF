@@ -65,9 +65,9 @@ def render_ray(nerf: NeRF, loc, ray, clipping, steps):
     Use volume rendering, from loc for distance clipping.
     """
     # Get samples at intervals.
-    step_ray = torch.tensor(ray / np.linalg.norm(ray) * clipping / steps, device=DEVICE)
-    model_input = torch.empty(steps, 3, device=DEVICE)
-    loc = torch.tensor(loc, device=DEVICE)
+    step_ray = ray / torch.norm(ray) * clipping / steps
+    model_input = torch.empty(steps, 3, device=DEVICE, dtype=torch.float32)
+    loc = torch.tensor(loc, device=DEVICE, dtype=torch.float32)
     for i in range(steps):
         loc = loc + step_ray
         model_input[i] = loc
@@ -77,7 +77,7 @@ def render_ray(nerf: NeRF, loc, ray, clipping, steps):
     density_cum = torch.exp(-torch.cumsum(density, dim=0))
 
     # Integrate
-    result = torch.zeros(3, device=DEVICE)
+    result = torch.zeros(3, device=DEVICE, dtype=torch.float32)
     for i in range(steps):
         result += density_cum[i] * density[i] * color[i]
 
@@ -88,7 +88,7 @@ def render_image(nerf: NeRF, loc, rot, fov, resolution: tuple[int, int]):
     """
     :param loc, rot, fov, resolution: Camera parameters. See dataset.py/pixel_to_ray
     """
-    image = torch.zeros((*resolution, 3), device=DEVICE)
+    image = torch.zeros((*resolution, 3), device=DEVICE, dtype=torch.float32)
     for x in range(resolution[0]):
         for y in range(resolution[1]):
             ray = pixel_to_ray(*resolution, fov, rot, x, y)

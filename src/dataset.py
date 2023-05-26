@@ -21,7 +21,9 @@ class ImageDataset(Dataset):
     ...
     """
 
-    def __init__(self, directory: Path):
+    def __init__(self, directory):
+        directory = Path(directory)
+
         # List of (path_to_image, metadata)
         self.images = []
 
@@ -43,11 +45,10 @@ class ImageDataset(Dataset):
             image_path, meta = self.images[i]
             width, height = meta["res"]
             curr_size = width * height
-            if idx < i + curr_size:
+            if idx < curr_size:
                 break
-            i += curr_size
-        # `idx` is index of pixel in `image`
-        idx -= i
+            idx -= curr_size
+            i += 1
 
         # Get ray
         px_y = idx // width
@@ -57,7 +58,7 @@ class ImageDataset(Dataset):
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         color = image[px_y, px_x] / 255
 
-        return (meta["loc"], ray), color
+        return (torch.tensor(meta["loc"], dtype=torch.float32), ray), torch.tensor(color, dtype=torch.float32)
 
 
 def quat_mult(q1, q2):

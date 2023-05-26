@@ -10,11 +10,6 @@ from torch.nn.utils import clip_grad_norm_
 from torch.utils.data import DataLoader, random_split
 from torch.utils.tensorboard import SummaryWriter
 
-import torch.multiprocessing as mp
-from torch.distributed import init_process_group, destroy_process_group
-from torch.nn.parallel import DistributedDataParallel as DDP
-from torch.utils.data.distributed import DistributedSampler
-
 from constants import *
 from dataset import *
 from model import *
@@ -31,10 +26,17 @@ def forward_batch(loader, model, criterion, scheduler, epoch: int, train: bool):
     """
     name = "Train" if train else "Test"
     pbar = tqdm(enumerate(loader), total=len(loader), desc=name)
-    # TODO: Custom forward pass code
     for i, (x, y) in pbar:
-        x, y = x.to(DEVICE), y.to(DEVICE)
-        pred = model(x)
+        x = [i.to(DEVICE) for i in x]
+        y = y.to(DEVICE)
+
+        # Run model on rays.
+        pred = torch.empty(len(x[0]), 3, device=DEVICE, dtype=torch.float32)
+        for j in range(pred.size(0)):
+            loc = x[0][j]
+            ray = x[1][j]
+            pred[j] = render_ray(model, loc, ray, CLIPPING, RENDER_STEPS)
+
         loss = criterion(pred, y)
 
         # Set tqdm progress bar.
@@ -79,8 +81,6 @@ def train(model, dataset, logdir, args):
             "num_workers": 4,
             "pin_memory": True,
         }
-        if args.ddp:
-            loader_args["sampler"] = DistributedSampler(dataset)
         return DataLoader(dataset, **loader_args)
 
     # Create data loaders.
@@ -92,8 +92,7 @@ def train(model, dataset, logdir, args):
     print(f"Train set: {len(train_dataset)} batches")
     print(f"Test set: {len(test_dataset)} batches")
 
-    # TODO loss and optim
-    criterion = torch.nn.BCELoss()
+    criterion = torch.nn.MSELoss()
     optim = torch.optim.Adam(model.parameters(), lr=LR_START)
     lr_decay_fac = (LR_END / LR_START) ** (1 / EPOCHS)
     scheduler = torch.optim.lr_scheduler.StepLR(optim, step_size=1, gamma=lr_decay_fac)
@@ -104,16 +103,10 @@ def train(model, dataset, logdir, args):
         return
     log = create_logdir(logdir)
 
-    if args.ddp:
-        print("Wrapping model in DDP")
-        model = DDP(model, device_ids=[DEVICE])
-
     batch_num = 0
     for epoch in range(EPOCHS):
         # Train
         model.train()
-        if args.ddp:
-            train_loader.sampler.set_epoch(epoch)
         for loss in forward_batch(train_loader, model, criterion, scheduler, epoch, True):
             loss.backward()
             if (batch_num+1) % BATCH_PER_STEP == 0:
@@ -126,8 +119,6 @@ def train(model, dataset, logdir, args):
             batch_num += 1
 
         # Test
-        if args.ddp:
-            test_loader.sampler.set_epoch(epoch)
         with torch.no_grad():
             model.eval()
             total_loss = 0
@@ -148,40 +139,19 @@ def train(model, dataset, logdir, args):
 def main():
     parser = create_parser()
     parser.add_argument("--info", action="store_true", help="Only print session configuration.")
-    parser.add_argument("--ddp", action="store_true", help="Use DistributedDataParallel.")
     args = parser.parse_args()
 
     os.makedirs(args.data, exist_ok=True)
     os.makedirs(args.runs, exist_ok=True)
 
-    if args.ddp:
-        # Init process group
-        print(f"Using DDP. World size is {dist.get_world_size()}")
-        print("Initializing process group")
-        init_process_group(backend="nccl")
-
-        # DDP rank
-        local_rank = int(os.environ["LOCAL_RANK"])
-        global_rank = int(os.environ["RANK"])
-        print(f"DDP rank: global {global_rank}, local {local_rank}")
-
-        # Set device
-        global DEVICE
-        DEVICE = local_rank
-
-    # TODO: Class names
-    model = MyModel().to(DEVICE)
+    model = NeRF(3).to(DEVICE)
     num_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
-    dataset = MyDataset(args.data)
+    dataset = ImageDataset(args.data)
     logdir = get_new_run(args)
 
     print(f"Dataset: {len(dataset)} samples")
     print(f"Model: {num_params} learnable parameters")
     train(model, dataset, logdir, args)
-
-    if args.ddp:
-        print("Destroying process group")
-        destroy_process_group()
 
 
 if __name__ == "__main__":
