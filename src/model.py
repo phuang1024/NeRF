@@ -25,9 +25,10 @@ class SineEmbedding(nn.Module):
 
     def forward(self, x):
         embed = torch.zeros((*x.shape, EMBED_DIM), device=x.device)
-        freqs = torch.exp(torch.linspace(math.log(FREQ_MIN), math.log(FREQ_MAX), EMBED_DIM))
-        for i in range(EMBED_DIM):
-            embed[..., i] = torch.sin(x * freqs[i])
+        freqs = torch.exp(torch.linspace(math.log(FREQ_MIN), math.log(FREQ_MAX), EMBED_DIM // 2))
+        for i in range(EMBED_DIM // 2):
+            embed[..., 2*i] = torch.sin(x * freqs[i])
+            embed[..., 2*i + 1] = torch.cos(x * freqs[i])
         return embed
 
 
@@ -128,7 +129,6 @@ def dummy_nerf(x):
 
 
 if __name__ == "__main__":
-    """
     # Test sine embeddings
     embedding = SineEmbedding()
     data = torch.linspace(0, 1, 1000)
@@ -136,8 +136,8 @@ if __name__ == "__main__":
     embeds = np.interp(embeds, [np.min(embeds), np.max(embeds)], [0, 1])
     plt.imshow(embeds.T, aspect="auto", cmap="gray")
     plt.savefig("embed.png")
-    """
 
+    """
     # Test render image
     nerf = NeRF(3).to(DEVICE)
     nerf.apply(init_weights)
@@ -147,3 +147,4 @@ if __name__ == "__main__":
     image = image.detach().cpu().numpy()
     image = np.clip(image*255, 0, 255).astype(np.uint8)
     cv2.imwrite("image.png", image)
+    """

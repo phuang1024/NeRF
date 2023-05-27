@@ -78,7 +78,7 @@ def train(model, dataset, logdir, args):
         loader_args = {
             "batch_size": BATCH_SIZE,
             "shuffle": True,
-            "num_workers": 4,
+            "num_workers": 16,
             "pin_memory": True,
         }
         return DataLoader(dataset, **loader_args)
