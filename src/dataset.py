@@ -56,6 +56,8 @@ class ImageDataset(Dataset):
 
     def get_meta(self, idx):
         """
+        :param idx: Index of pixel.
+            e.g. if 0th image is 64x64, then indices 0 to 64*64 will all return metadata for image 0.
         :return: (meta, img_i, px_i)
             meta is dictionary of image metadata.
             img_i is which image was used.
