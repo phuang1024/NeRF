@@ -25,10 +25,10 @@ class SineEmbedding(nn.Module):
 
     def forward(self, x):
         embed = torch.zeros((*x.shape, EMBED_DIM), device=x.device)
-        freqs = torch.exp(torch.linspace(math.log(FREQ_MIN), math.log(FREQ_MAX), EMBED_DIM // 2))
-        for i in range(EMBED_DIM // 2):
-            embed[..., 2*i] = torch.sin(x * freqs[i])
-            embed[..., 2*i + 1] = torch.cos(x * freqs[i])
+        freqs = torch.exp(torch.linspace(math.log(FREQ_MIN), math.log(FREQ_MAX), EMBED_DIM // 2, device=DEVICE, dtype=torch.float32))
+        x = x.unsqueeze(-1)
+        embed[..., 0::2] = torch.sin(x * freqs)
+        embed[..., 1::2] = torch.cos(x * freqs)
         return embed
 
 
