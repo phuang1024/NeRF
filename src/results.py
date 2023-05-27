@@ -20,7 +20,7 @@ def main():
         meta, _, _ = dataset.get_meta(0)
         loc = torch.tensor(meta["loc"], device=DEVICE, dtype=torch.float32)
         rot = torch.tensor(meta["rot"], dtype=torch.float32)
-        image = render_image(model, loc, rot, 60, (128, 128))
+        image = render_image(model, loc, rot, math.radians(60), (64, 64))
         image = image.detach().cpu().numpy()
         image = np.clip(image*255, 0, 255).astype(np.uint8)
         image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)

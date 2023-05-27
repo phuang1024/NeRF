@@ -31,6 +31,7 @@ class ImageDataset(Dataset):
             if file.suffix == ".jpg" and (json_file := file.with_suffix(".json")).exists():
                 meta = json.loads(json_file.read_text())
                 self.images.append((file, meta))
+                break
 
     def __len__(self) -> int:
         length = 0

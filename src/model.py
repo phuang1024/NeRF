@@ -51,6 +51,7 @@ class NeRF(nn.Module):
             layers.append(nn.Linear(in_dim, out_dim))
             if i != MLP_DEPTH - 1:
                 layers.append(nn.LeakyReLU())
+        # TODO add sigmoid
         self.mlp = nn.Sequential(*layers)
 
     def forward(self, x):
@@ -102,6 +103,17 @@ def init_weights(m):
         nn.init.zeros_(m.bias)
 
 
+def dummy_nerf(x):
+    """
+    Unit cube.
+    """
+    output = torch.empty(x.size(0), 4, device=DEVICE, dtype=torch.float32)
+    for i in range(output.size(0)):
+        in_cube = torch.all(-0.1 <= x[i]) and torch.all(x[i] <= 0.1)
+        output[i] = torch.tensor([1, 0, 0, 1]) if in_cube else torch.tensor([0, 0, 0, 0])
+    return output
+
+
 if __name__ == "__main__":
     """
     # Test sine embeddings
@@ -116,9 +128,9 @@ if __name__ == "__main__":
     # Test render image
     nerf = NeRF(3).to(DEVICE)
     nerf.apply(init_weights)
-    loc = np.array([0, 0, 0])
-    rot = np.array([1, 0, 0, 0])
-    image = render_image(nerf, loc, rot, 60, (128, 128))
+    loc = torch.tensor([0, 0, 3], device=DEVICE, dtype=torch.float32)
+    rot = torch.tensor([1, 0, 0, 0], dtype=torch.float32)
+    image = render_image(nerf, loc, rot, math.radians(60), (64, 64))
     image = image.detach().cpu().numpy()
     image = np.clip(image*255, 0, 255).astype(np.uint8)
     cv2.imwrite("image.png", image)
