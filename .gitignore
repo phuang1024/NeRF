@@ -8,3 +8,6 @@ data
 runs
 
 *.png
+*.jpg
+*.mp4
+!examples/*

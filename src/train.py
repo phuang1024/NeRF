@@ -35,7 +35,7 @@ def forward_batch(loader, model, criterion, scheduler, epoch: int, train: bool):
         for j in range(pred.size(0)):
             loc = x[0][j]
             ray = x[1][j]
-            pred[j] = render_ray(model, loc, ray, CLIPPING, RENDER_STEPS)
+            pred[j] = render_ray(model, loc, ray, CLIP_START, CLIP_END, RENDER_STEPS)
 
         loss = criterion(pred, y)
 

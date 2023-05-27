@@ -48,11 +48,17 @@ class ImageDataset(Dataset):
         px_y = idx // width
         px_x = idx % width
         ray = pixel_to_ray(width, height, meta["fov"], meta["rot"], px_x, px_y)
+        ray = torch.tensor(ray, dtype=torch.float32)
+        loc = torch.tensor(meta["loc"], dtype=torch.float32)
+        #loc += RAND_JITTER * torch.randn_like(loc)
+        #ray += RAND_JITTER * torch.randn_like(ray)
+
         image = cv2.imread(str(image_path))
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         color = image[px_y, px_x] / 255
+        color = torch.tensor(color, dtype=torch.float32)
 
-        return (torch.tensor(meta["loc"], dtype=torch.float32), ray), torch.tensor(color, dtype=torch.float32)
+        return (loc, ray), color
 
     def get_meta(self, idx):
         """
@@ -110,6 +116,20 @@ def pixel_to_ray(width, height, fov_x, rot: np.ndarray, x, y):
     ray /= np.linalg.norm(ray)
 
     return ray
+
+
+def ray_to_rot(ray):
+    """
+    Returns quaternion rotation to go from (0, 0, -1) to `ray`.
+    """
+    start = np.array([0, 0, -1])
+    end = ray / np.linalg.norm(ray)
+    axis = np.cross(start, end)
+    axis /= np.linalg.norm(axis)
+    angle = np.arccos(np.dot(start, end))
+
+    rot = np.array([np.cos(angle / 2), *(axis * np.sin(angle / 2))])
+    return rot
 
 
 if __name__ == "__main__":

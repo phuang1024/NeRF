@@ -75,22 +75,22 @@ class NeRF(nn.Module):
         return x
 
 
-def render_ray(nerf: NeRF, loc, ray, clipping, steps):
+def render_ray(nerf: NeRF, loc, ray, clip_start, clip_end, steps):
     """
     Use volume rendering, from loc for distance clipping.
     """
     # Get samples at intervals.
-    step_ray = ray / torch.norm(ray) * clipping / steps
-    model_input = torch.arange(steps, device=DEVICE, dtype=torch.float32).view(-1, 1) * step_ray + loc
+    step_ray = ray / torch.norm(ray) * (clip_end-clip_start) / steps
+    model_input = torch.arange(steps, device=DEVICE, dtype=torch.float32).view(-1, 1) * step_ray + loc + clip_start * ray
     samples = nerf(model_input)
 
     # Extract color and density.
     color = samples[:, :3]
     density = samples[:, 3]
-    density_cum = torch.exp(-torch.cumsum(density, dim=0))
+    prob = torch.exp(-torch.cumsum(density, dim=0))
 
     # Integrate.
-    result = torch.sum((density_cum * density).view(-1, 1) * color, dim=0)
+    result = torch.sum((prob * density).view(-1, 1) * color, dim=0)
 
     return result
 
@@ -104,7 +104,7 @@ def render_image(nerf: NeRF, loc, rot, fov, resolution: tuple[int, int]):
         for y in range(resolution[1]):
             ray = pixel_to_ray(*resolution, fov, rot, x, y)
             ray = torch.tensor(ray, device=DEVICE, dtype=torch.float32)
-            image[y, x] = render_ray(nerf, loc, ray, CLIPPING, RENDER_STEPS)
+            image[y, x] = render_ray(nerf, loc, ray, CLIP_START, CLIP_END, RENDER_STEPS)
     return image
 
 
@@ -128,8 +128,8 @@ def dummy_nerf(x):
 if __name__ == "__main__":
     # Test sine embeddings
     embedding = SineEmbedding()
-    data = torch.linspace(0, 1, 1000)
-    embeds = embedding(data).detach().numpy()
+    data = torch.linspace(0, 1, 1000, device=DEVICE, dtype=torch.float32)
+    embeds = embedding(data).cpu().detach().numpy()
     embeds = np.interp(embeds, [np.min(embeds), np.max(embeds)], [0, 1])
     plt.imshow(embeds.T, aspect="auto", cmap="gray")
     plt.savefig("embed.png")
