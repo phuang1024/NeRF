@@ -81,19 +81,16 @@ def render_ray(nerf: NeRF, loc, ray, clipping, steps):
     """
     # Get samples at intervals.
     step_ray = ray / torch.norm(ray) * clipping / steps
-    model_input = torch.empty(steps, 3, device=DEVICE, dtype=torch.float32)
-    for i in range(steps):
-        loc = loc + step_ray
-        model_input[i] = loc
+    model_input = torch.arange(steps, device=DEVICE, dtype=torch.float32).view(-1, 1) * step_ray + loc
     samples = nerf(model_input)
+
+    # Extract color and density.
     color = samples[:, :3]
     density = samples[:, 3]
     density_cum = torch.exp(-torch.cumsum(density, dim=0))
 
-    # Integrate
-    result = torch.zeros(3, device=DEVICE, dtype=torch.float32)
-    for i in range(steps):
-        result += density_cum[i] * density[i] * color[i]
+    # Integrate.
+    result = torch.sum((density_cum * density).view(-1, 1) * color, dim=0)
 
     return result
 
