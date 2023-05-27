@@ -95,7 +95,7 @@ def train(model, dataset, logdir, args):
     print(f"Test set: {len(test_dataset)} batches")
 
     criterion = torch.nn.MSELoss()
-    optim = torch.optim.Adam(model.parameters(), lr=LR_START, momentum=0.5)
+    optim = torch.optim.Adam(model.parameters(), lr=LR_START)
     lr_decay_fac = (LR_END / LR_START) ** (1 / EPOCHS)
     scheduler = torch.optim.lr_scheduler.StepLR(optim, step_size=1, gamma=lr_decay_fac)
 

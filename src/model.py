@@ -7,6 +7,7 @@ import numpy as np
 import torch
 import torchvision
 import torch.nn as nn
+import torch.nn.functional as F
 
 from constants import *
 from dataset import pixel_to_ray
@@ -42,22 +43,34 @@ class NeRF(nn.Module):
         """
         super().__init__()
 
-        self.embedding = SineEmbedding()
+        self.d_input = d_input
+        self.skips = [2, 4, 6]
 
-        layers = []
+        self.embedding = SineEmbedding()
+        embed_dim = EMBED_DIM * d_input
+
+        self.layers = nn.ModuleList()
         for i in range(MLP_DEPTH):
             in_dim = EMBED_DIM * d_input if i == 0 else MLP_DIM
             out_dim = 4 if i == MLP_DEPTH - 1 else MLP_DIM
-            layers.append(nn.Linear(in_dim, out_dim))
-            if i != MLP_DEPTH - 1:
-                layers.append(nn.LeakyReLU())
-        # TODO add sigmoid
-        self.mlp = nn.Sequential(*layers)
+            if i in self.skips:
+                in_dim += embed_dim
+            self.layers.append(nn.Linear(in_dim, out_dim))
 
     def forward(self, x):
-        x = self.embedding(x)
-        x = x.view(x.shape[0], -1)
-        x = self.mlp(x)
+        embed = self.embedding(x)
+        embed = embed.view(embed.shape[0], -1)
+        x = embed
+
+        for i, layer in enumerate(self.layers):
+            if i in self.skips:
+                x = torch.cat([x, embed], dim=-1)
+            x = layer(x)
+            if i != MLP_DEPTH - 1:
+                x = F.leaky_relu(x)
+
+        x = F.sigmoid(x)
+
         return x
 
 
