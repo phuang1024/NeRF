@@ -1,16 +1,14 @@
 import torch
 
 # Data parameters
-# Random additive jitter to xyz to prevent overfitting.
-#RAND_JITTER = 0.01
 
 # Model hyperparameters
 # Sine embeddings
 FREQ_MIN = 0.1
-FREQ_MAX = 100
-EMBED_DIM = 32
+FREQ_MAX = 50
+EMBED_DIM = 16
 # NeRF MLP model
-MLP_DIM = 1024
+MLP_DIM = 256
 MLP_DEPTH = 8
 # Rendering
 CLIP_START = 1

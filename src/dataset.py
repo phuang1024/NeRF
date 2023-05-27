@@ -1,4 +1,5 @@
 import json
+import random
 from pathlib import Path
 
 import cv2
@@ -47,11 +48,9 @@ class ImageDataset(Dataset):
         # Get ray
         px_y = idx // width
         px_x = idx % width
-        ray = pixel_to_ray(width, height, meta["fov"], meta["rot"], px_x, px_y)
+        ray = pixel_to_ray(width, height, meta["fov"], meta["rot"], px_x+random.uniform(0, 1), px_y+random.uniform(0, 1))
         ray = torch.tensor(ray, dtype=torch.float32)
         loc = torch.tensor(meta["loc"], dtype=torch.float32)
-        #loc += RAND_JITTER * torch.randn_like(loc)
-        #ray += RAND_JITTER * torch.randn_like(ray)
 
         image = cv2.imread(str(image_path))
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
@@ -128,7 +127,10 @@ def ray_to_rot(ray):
     axis /= np.linalg.norm(axis)
     angle = np.arccos(np.dot(start, end))
 
-    rot = np.array([np.cos(angle / 2), *(axis * np.sin(angle / 2))])
+    rot = np.array([
+        np.cos(angle/2),
+        *np.sin(angle/2) * axis
+    ])
     return rot
 
 
