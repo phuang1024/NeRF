@@ -16,5 +16,5 @@ Top is NeRF render. Bottom is ground truth.
 
 ![](https://github.com/phuang1024/NeRF/blob/master/examples/plant.jpg?raw=true)
 
-In theory, the quality should improve with more training. However, with my slow code,
-it takes too long.
+In theory, the quality should improve with more training. The paper states that 100k to 300k
+iterations are needed for a good result. However, with my slow code, it takes too long.
