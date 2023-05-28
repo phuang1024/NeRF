@@ -120,6 +120,10 @@ def train(model, dataset, logdir, args):
             log.add_scalar("LR", scheduler.get_last_lr()[0], batch_num)
             batch_num += 1
 
+            # Save model
+            if batch_num % SAVE_INTERVAL == 0:
+                torch.save(model.state_dict(), os.path.join(logdir, f"step.{batch_num+1}.pt"))
+
         # Test
         with torch.no_grad():
             model.eval()
@@ -130,10 +134,6 @@ def train(model, dataset, logdir, args):
             log.add_scalar("Test loss", avg_loss, batch_num)
 
         scheduler.step()
-
-        # Save model
-        if (epoch+1) % SAVE_INTERVAL == 0 or epoch == EPOCHS-1:
-            torch.save(model.state_dict(), os.path.join(logdir, f"epoch.{epoch+1}.pt"))
 
     log.close()
 

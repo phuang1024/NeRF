@@ -33,7 +33,7 @@ def compare(dataset, model):
             loc = torch.tensor(meta["loc"], device=DEVICE, dtype=torch.float32)
             rot = torch.tensor(meta["rot"], dtype=torch.float32)
 
-            image = run_nerf(model, loc+0.01, rot, meta["fov"])
+            image = run_nerf(model, loc, rot, meta["fov"])
 
             truth = cv2.imread(str(dataset.images[i][0]))
             truth = cv2.cvtColor(truth, cv2.COLOR_BGR2RGB)
